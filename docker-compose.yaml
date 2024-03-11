@@ -1,0 +1,32 @@
+services:
+    db:
+        image: postgres:alpine
+        environment:
+            - POSTGRES_DB=site
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+        volumes:
+            - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+        ports:
+            - 5432:5432
+
+    redis:
+        image: redis:alpine
+        ports:
+            - 6379:6379
+
+    site:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        command: ["uvicorn", "--reload", "--host", "0.0.0.0", "main:app"]
+        environment:
+            POSTGRES_URI: "postgresql://postgres:postgres@db/site"
+            REDIS_URI: "redis://redis:6379"
+        depends_on:
+            - db
+            - redis
+        ports:
+            - 8000:8000
+        volumes:
+            - .:/app
