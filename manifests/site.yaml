@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: site-configuration
+    namespace: apps
+data:
+    USE_REDIS: "true"
+
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+    name: site-keys
+    namespace: apps
+data:
+    POSTGRES_URI: >-
+        cG9zdGdyZXNxbDovL3NpdGU6c3Ryb25ncGFzc0Bwb3N0Z3Jlcy5kYnMuc3ZjLmNsdXN0ZXIubG9jYWw6NTQzMi9zaXRl
+    REDIS_URI: cmVkaXM6Ly9yZWRpcy5kYnMuc3ZjLmNsdXN0ZXIubG9jYWw6NjM3OQ==
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: site
+    namespace: apps
+    labels:
+        app: site
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: site
+    template:
+        metadata:
+            name: site
+            labels:
+                app: site
+        spec:
+            containers:
+                -   name: site
+                    image: ghcr.io/hassanabouelela/devopsdemo
+                    imagePullPolicy: IfNotPresent
+                    command: ["uvicorn", "--host", "0.0.0.0", "--port", "8000", "main:app"]
+                    envFrom:
+                        - configMapRef:
+                              name: site-configuration
+                        - secretRef:
+                              name: site-keys
+
+            restartPolicy: Always
+            imagePullSecrets:
+                - name: pull-token
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: site
+    namespace: apps
+
+spec:
+    selector:
+        app: site
+    ports:
+        - protocol: TCP
+          port: 80
+          targetPort: 8000
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: site
+    namespace: apps
+spec:
+    rules:
+        - host: devops.com
+          http:
+            paths:
+                - path: /
+                  pathType: Prefix
+                  backend:
+                      service:
+                          name: site
+                          port:
+                              number: 80
