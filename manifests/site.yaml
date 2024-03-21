@@ -4,7 +4,7 @@ metadata:
     name: site-configuration
     namespace: apps
 data:
-    USE_REDIS: "true"
+    USE_CACHE: "true"
 
 ---
 apiVersion: v1
